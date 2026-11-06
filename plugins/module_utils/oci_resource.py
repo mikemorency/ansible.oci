@@ -115,6 +115,11 @@ class OciResourceBase(OciModuleBase, ABC):
     list_resource_method = None
     common_list_filter_params = ("compartment_id",)
     list_filter_params = ()
+    # Extra list-call filters that apply only to name lookups, such as a
+    # server-side exact-name filter. Unlike ``list_filter_params`` these are
+    # not required scope, so they are deliberately left out of the messages
+    # that tell a caller which parameters a name lookup or delete needs.
+    name_lookup_filter_params = ()
     name_lookup_param = "name"
     name_response_field = "display_name"
     create_required_fields = ()
@@ -573,6 +578,7 @@ class OciResourceBase(OciModuleBase, ABC):
             **self.collect_list_filters(
                 self.common_list_filter_params,
                 self.list_filter_params,
+                self.name_lookup_filter_params,
             ),
         )
         name_lookup_value = self.name_lookup_value

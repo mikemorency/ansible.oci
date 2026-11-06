@@ -1,0 +1,32 @@
+---
+- name: Create the notification topic used by the DevOps project
+  ansible.oci.oci_notification_topic:
+    compartment_id: "{{ oci_integration_compartment_id }}"
+    name: "{{ oci_devops_repository_topic_name }}"
+    description: Topic for the DevOps repository integration test
+  register: devops_repository_topic
+
+- name: Record the topic for cleanup
+  ansible.builtin.set_fact:
+    oci_devops_repository_topic_cleanup_names:
+      - "{{ oci_devops_repository_topic_name }}"
+
+- name: Create the DevOps project that will contain the repository
+  ansible.oci.oci_devops_project:
+    compartment_id: "{{ oci_integration_compartment_id }}"
+    name: "{{ oci_devops_repository_project_name }}"
+    description: Project for the DevOps repository integration test
+    notification_config:
+      topic_id: "{{ devops_repository_topic.resource.topic_id }}"
+  register: devops_repository_project
+
+- name: Record the project for cleanup
+  ansible.builtin.set_fact:
+    oci_devops_repository_project_cleanup_id: "{{ devops_repository_project.resource.id }}"
+
+- name: Verify the supporting resources are available
+  ansible.builtin.assert:
+    that:
+      - devops_repository_topic.resource.topic_id | length > 0
+      - devops_repository_project.resource.id | length > 0
+      - devops_repository_project.resource.lifecycle_state == 'ACTIVE'

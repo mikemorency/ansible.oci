@@ -1,0 +1,37 @@
+---
+- name: Validate required OCI integration variables
+  ansible.builtin.assert:
+    that:
+      - oci_integration_compartment_id | default('', true) | length > 0
+    fail_msg: >-
+      OCI DevOps repository integration tests require oci_integration_compartment_id to be defined in
+      tests/integration/integration_config.yml.
+
+- name: Compute unique resource names and initialize cleanup markers
+  ansible.builtin.set_fact:
+    oci_devops_repository_name: "{{ oci_devops_repository_integration_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_repository_renamed: "{{ oci_devops_repository_integration_name }}-{{ oci_integration_rpfx }}-renamed"
+    oci_devops_repository_project_name: "{{ oci_devops_repository_integration_project_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_repository_topic_name: "{{ oci_devops_repository_integration_topic_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_repository_cleanup_id: ""
+    oci_devops_repository_cleanup_name: "{{ oci_devops_repository_integration_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_repository_project_cleanup_id: ""
+    oci_devops_repository_topic_cleanup_names: []
+
+- name: Exercise the DevOps repository module lifecycle
+  module_defaults:
+    group/ansible.oci.oci:
+      config_file_location: "{{ oci_integration_config_file_location }}"
+      config_profile_name: "{{ oci_integration_config_profile_name }}"
+  block:
+    # A repository must belong to a DevOps project, and OCI requires every
+    # project to reference a notification topic, so both are created here.
+    - name: Create the supporting project and notification topic
+      ansible.builtin.import_tasks: supporting_resources.yml
+
+    - name: Create, update, and delete the repository
+      ansible.builtin.import_tasks: repository.yml
+
+  always:
+    - name: Run DevOps repository cleanup
+      ansible.builtin.include_tasks: cleanup.yml

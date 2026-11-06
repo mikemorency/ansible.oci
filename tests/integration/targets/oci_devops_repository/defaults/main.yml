@@ -1,0 +1,13 @@
+---
+oci_devops_repository_integration_name: "oci-devops-repository-integration"
+oci_devops_repository_integration_description: "OCI DevOps repository integration test"
+oci_devops_repository_integration_project_name: "oci-devops-repository-integration-project"
+oci_devops_repository_integration_topic_name: "oci-devops-repository-integration-topic"
+oci_devops_repository_integration_default_branch: main
+oci_devops_repository_integration_updated_branch: develop
+oci_devops_repository_integration_create_tags:
+  phase: create
+  role: integration
+oci_devops_repository_integration_update_tags:
+  phase: update
+  role: integration

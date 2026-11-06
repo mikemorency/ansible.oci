@@ -1472,6 +1472,79 @@ def test_oci_resource_base_uses_unique_name_match_as_update_target(monkeypatch):
     ]
 
 
+def test_oci_resource_base_name_lookup_filters_are_not_required_scope(monkeypatch):
+    """Pass name-lookup-only filters to the list call without demanding them."""
+    oci_resource = load_collection_module("oci_resource")
+    patch_create_service_client(
+        monkeypatch,
+        oci_resource,
+        lambda module, client_class: types.SimpleNamespace(
+            list_examples="list_examples_method"
+        ),
+    )
+
+    class ExampleResource(oci_resource.OciResourceBase):
+        update_field_specs = ()
+        client_class = object
+        resource_id_param = "example_id"
+        list_resource_method = "list_examples"
+        common_list_filter_params = ("compartment_id",)
+        name_lookup_filter_params = ("name",)
+        create_resource_name = "example resource"
+
+        def get_resource_response(self, resource_id):
+            raise AssertionError("get_resource_response should not be called")
+
+        def create_resource(self):
+            raise AssertionError("create_resource should not be called")
+
+        def update_resource(self, resource):
+            raise AssertionError("update_resource should not be called")
+
+        def delete_resource(self, resource):
+            raise AssertionError("delete_resource should not be called")
+
+    resource = ExampleResource(
+        DummyModule({"name": "example", "compartment_id": "ocid1.compartment"})
+    )
+    calls = []
+    monkeypatch.setattr(
+        resource,
+        "list_all_resources",
+        lambda list_fn, **kwargs: calls.append((list_fn, kwargs)) or [],
+    )
+
+    assert resource.find_resources_by_name() == []
+    assert calls == [
+        (
+            "list_examples_method",
+            {"compartment_id": "ocid1.compartment", "name": "example"},
+        )
+    ]
+
+    # The lookup filter is an optimization, so it must stay out of the scope
+    # that the name-lookup and delete error messages advertise as required.
+    missing_scope = ExampleResource(DummyModule({"name": "example"}))
+    with pytest.raises(FailJsonCalled) as exc_info:
+        missing_scope.validate_name_lookup_scope()
+    assert exc_info.value.payload == {
+        "msg": (
+            "Using name lookup for example resource requires the following "
+            "parameters: compartment_id"
+        )
+    }
+
+    delete_target = ExampleResource(DummyModule({"state": "absent"}))
+    with pytest.raises(FailJsonCalled) as exc_info:
+        delete_target.validate_delete_request()
+    assert exc_info.value.payload == {
+        "msg": (
+            "Deleting a example resource requires either example_id or name "
+            "(with compartment_id)"
+        )
+    }
+
+
 def test_oci_resource_base_requires_scope_fields_for_name_lookup(monkeypatch):
     oci_resource = load_collection_module("oci_resource")
     patch_create_service_client(

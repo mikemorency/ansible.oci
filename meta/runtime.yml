@@ -137,3 +137,5 @@ action_groups:
         - oci_notification_topic_info
         - oci_devops_project
         - oci_devops_project_info
+        - oci_devops_repository
+        - oci_devops_repository_info

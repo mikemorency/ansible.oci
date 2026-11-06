@@ -195,8 +195,10 @@ class OciDevopsProjectModule(OciResourceBase):
     list_resource_method = "list_projects"
     name_response_field = "name"
     # list_projects accepts an exact name filter; pass it so name lookups
-    # filter server-side instead of paging the whole compartment.
-    list_filter_params = ("name",)
+    # filter server-side instead of paging the whole compartment. It is not
+    # part of the required lookup scope, so it does not belong in
+    # list_filter_params, which is what the scope error messages list.
+    name_lookup_filter_params = ("name",)
     create_required_fields = CREATE_REQUIRED_FIELDS
     create_resource_name = "DevOps project"
     update_method_name = "update_project"

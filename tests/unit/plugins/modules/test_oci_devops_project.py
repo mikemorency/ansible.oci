@@ -129,6 +129,10 @@ def test_class_metadata(monkeypatch):
     assert cls.resource_id_field == "id"
     assert cls.list_resource_method == "list_projects"
     assert cls.name_response_field == "name"
+    # The exact-name filter is a name-lookup optimization, not required scope,
+    # so it must not appear in the scope that error messages advertise.
+    assert cls.list_filter_params == ()
+    assert cls.name_lookup_filter_params == ("name",)
     assert cls.create_required_fields == (
         "compartment_id",
         "name",
@@ -521,6 +525,17 @@ def test_delete_conflict_reports_dependent_resources(monkeypatch):
     with pytest.raises(FailJsonCalled) as failure:
         instance.delete_resource(FakeModel(id="p1"))
     assert "dependent resources" in failure.value.payload["msg"]
+
+
+def test_absent_without_id_or_name_fails(monkeypatch):
+    """Require an identifier, and name only the real scope, before deleting."""
+    module_obj = load_project_module(monkeypatch)
+    instance = make_project(module_obj, {"state": "absent"})
+    with pytest.raises(FailJsonCalled) as failure:
+        instance.validate_delete_request()
+    message = failure.value.payload["msg"]
+    assert "project_id" in message
+    assert "name (with compartment_id)" in message
 
 
 def test_absent_when_missing_is_unchanged(monkeypatch):
