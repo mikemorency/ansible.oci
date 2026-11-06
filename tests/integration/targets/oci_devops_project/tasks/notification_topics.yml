@@ -1,0 +1,27 @@
+---
+- name: Create the primary notification topic
+  ansible.oci.oci_notification_topic:
+    compartment_id: "{{ oci_integration_compartment_id }}"
+    name: "{{ oci_devops_project_topic_name }}"
+    description: Topic for the DevOps project integration test
+  register: devops_topic
+
+- name: Create the alternate notification topic
+  ansible.oci.oci_notification_topic:
+    compartment_id: "{{ oci_integration_compartment_id }}"
+    name: "{{ oci_devops_project_alt_topic_name }}"
+    description: Alternate topic for the DevOps project integration test
+  register: devops_alt_topic
+
+- name: Record the topics for cleanup
+  ansible.builtin.set_fact:
+    oci_devops_project_topic_cleanup_names:
+      - "{{ oci_devops_project_topic_name }}"
+      - "{{ oci_devops_project_alt_topic_name }}"
+
+- name: Verify both topics are available
+  ansible.builtin.assert:
+    that:
+      - devops_topic.resource.topic_id | length > 0
+      - devops_alt_topic.resource.topic_id | length > 0
+      - devops_topic.resource.topic_id != devops_alt_topic.resource.topic_id

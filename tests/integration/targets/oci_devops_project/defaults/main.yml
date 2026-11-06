@@ -1,0 +1,11 @@
+---
+oci_devops_project_integration_name: "oci-devops-project-integration"
+oci_devops_project_integration_description: "OCI DevOps project integration test"
+oci_devops_project_integration_topic_name: "oci-devops-project-integration-topic"
+oci_devops_project_integration_alt_topic_name: "oci-devops-project-integration-topic-alt"
+oci_devops_project_integration_create_tags:
+  phase: create
+  role: integration
+oci_devops_project_integration_update_tags:
+  phase: update
+  role: integration

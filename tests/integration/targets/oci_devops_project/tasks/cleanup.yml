@@ -1,0 +1,54 @@
+---
+- name: Run DevOps project cleanup with shared OCI auth defaults
+  module_defaults:
+    group/ansible.oci.oci:
+      config_file_location: "{{ oci_integration_config_file_location }}"
+      config_profile_name: "{{ oci_integration_config_profile_name }}"
+  block:
+    # The project references a topic, so remove the project first.
+    - name: Delete leaked project by id
+      ansible.oci.oci_devops_project:
+        state: absent
+        project_id: "{{ oci_devops_project_cleanup_id }}"
+      when: oci_devops_project_cleanup_id | default('') | length > 0
+      register: oci_cleanup_project_by_id
+      retries: 3
+      delay: 10
+      until: oci_cleanup_project_by_id is succeeded
+      ignore_errors: true
+
+    - name: Delete leaked project by exact scoped name when no id was captured
+      ansible.oci.oci_devops_project:
+        state: absent
+        compartment_id: "{{ oci_integration_compartment_id }}"
+        name: "{{ oci_devops_project_cleanup_name }}"
+      when:
+        - oci_devops_project_cleanup_id | default('') | length == 0
+        - oci_devops_project_cleanup_name | default('') | length > 0
+      register: oci_cleanup_project_by_name
+      retries: 3
+      delay: 10
+      until: oci_cleanup_project_by_name is succeeded
+      ignore_errors: true
+
+    - name: Delete the supporting notification topics
+      ansible.oci.oci_notification_topic:
+        state: absent
+        compartment_id: "{{ oci_integration_compartment_id }}"
+        name: "{{ topic_name }}"
+      loop: "{{ oci_devops_project_topic_cleanup_names | default([]) }}"
+      loop_control:
+        loop_var: topic_name
+      register: oci_cleanup_topics
+      retries: 3
+      delay: 10
+      until: oci_cleanup_topics is succeeded
+      ignore_errors: true
+
+    - name: Verify resource cleanup succeeded
+      ansible.builtin.assert:
+        that:
+          - oci_cleanup_project_by_id is not failed
+          - oci_cleanup_project_by_name is not failed
+          - oci_cleanup_topics is not failed
+        fail_msg: Resource cleanup failed after 3 retries; see the failed cleanup tasks above.

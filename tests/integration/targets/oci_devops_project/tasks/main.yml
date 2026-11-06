@@ -1,0 +1,35 @@
+---
+- name: Validate required OCI integration variables
+  ansible.builtin.assert:
+    that:
+      - oci_integration_compartment_id | default('', true) | length > 0
+    fail_msg: >-
+      OCI DevOps project integration tests require oci_integration_compartment_id to be defined in
+      tests/integration/integration_config.yml.
+
+- name: Compute unique resource names and initialize cleanup markers
+  ansible.builtin.set_fact:
+    oci_devops_project_name: "{{ oci_devops_project_integration_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_project_topic_name: "{{ oci_devops_project_integration_topic_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_project_alt_topic_name: "{{ oci_devops_project_integration_alt_topic_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_project_cleanup_id: ""
+    oci_devops_project_cleanup_name: "{{ oci_devops_project_integration_name }}-{{ oci_integration_rpfx }}"
+    oci_devops_project_topic_cleanup_names: []
+
+- name: Exercise the DevOps project module lifecycle
+  module_defaults:
+    group/ansible.oci.oci:
+      config_file_location: "{{ oci_integration_config_file_location }}"
+      config_profile_name: "{{ oci_integration_config_profile_name }}"
+  block:
+    # OCI requires every DevOps project to reference a notification topic, so
+    # the project tests create their own topics to point at.
+    - name: Create the supporting notification topics
+      ansible.builtin.import_tasks: notification_topics.yml
+
+    - name: Create, update, and delete the project
+      ansible.builtin.import_tasks: project.yml
+
+  always:
+    - name: Run DevOps project cleanup
+      ansible.builtin.include_tasks: cleanup.yml
